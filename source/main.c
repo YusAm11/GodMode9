@@ -1,10 +1,14 @@
 #include "godmode.h"
+#include "unittype.h"
 #include "power.h"
 
 void main(int argc, char** argv)
 {
-    (void) argc; // unused for now
     (void) argv; // unused for now
+    
+    // running from FIRM0 partition?
+    if (IS_SIGHAX && !argc)
+        GodModeFirm0();
     
     // Screen on
     ScreenOn();

@@ -2018,3 +2018,35 @@ u32 GodMode() {
     
     return exit_mode;
 }
+
+u32 GodModeFirm0() {
+    const char* paths[] = { "0:/bootonce.firm", "0:/boot.firm", "1:/boot.firm" }; // first entry is temp
+    const char* bootpaths[] = { "sdmc:/bootonce.firm", "sdmc:/boot.firm", "nand:/boot.firm" }; // first entry is temp
+    
+    if (CheckButton(BUTTON_LEFT|BUTTON_UP|BUTTON_L1))
+        return 0; // skip if this button combo is pressed
+    
+    InitSDCardFS();
+    AutoEmuNandBase(true);
+    InitNandCrypto(true);
+    InitExtFS();
+    
+    u32 firm_size = 0;
+    const char* bootpath = NULL;
+    for (u32 i = 0; i < sizeof(paths)/sizeof(const char*); i++) {
+        if ((firm_size = FileGetData(paths[i], TEMP_BUFFER, TEMP_BUFFER_SIZE, 0))) {
+            bootpath = (char*) bootpaths[i];
+            if (i == 0) PathDelete(bootpath);
+            break;
+        }
+    }
+    if (!bootpath) return 0; // boot path not found
+    
+    if ((firm_size == TEMP_BUFFER_SIZE) || !(ValidateFirm(TEMP_BUFFER, firm_size) != 0))
+        return 1; // too big or not a valid FIRM
+    
+    if (*(TEMP_BUFFER+0x10)) ScreenOn();
+    BootFirm((FirmHeader*)(void*)TEMP_BUFFER, bootpath);
+    while(1);
+    return 1;
+}
