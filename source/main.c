@@ -1,6 +1,7 @@
 #include "godmode.h"
 #include "unittype.h"
 #include "power.h"
+#include "pxi.h"
 
 void main(int argc, char** argv)
 {
@@ -12,7 +13,7 @@ void main(int argc, char** argv)
     
     // Screen on
     ScreenOn();
-    
+
     // Run the main program
     if (GodMode() == GODMODE_EXIT_REBOOT) Reboot();
     else PowerOff();

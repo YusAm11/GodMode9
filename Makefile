@@ -23,7 +23,7 @@ endif
 BUILD		:=	build
 SOURCES		:=	source source/common source/filesys source/crypto source/fatfs source/nand source/virtual source/game source/gamecart source/quicklz
 DATA		:=	data
-INCLUDES	:=	source source/common source/font source/filesys source/crypto source/fatfs source/nand source/virtual source/game source/gamecart source/quicklz
+INCLUDES	:=	common source source/common source/font source/filesys source/crypto source/fatfs source/nand source/virtual source/game source/gamecart source/quicklz
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -58,6 +58,10 @@ ifeq ($(SWITCH_SCREENS),1)
 	CFLAGS += -DSWITCH_SCREENS
 endif
 
+ifneq ("$(wildcard $(CURDIR)/data/aeskeydb.bin)","")
+	CFLAGS += -DHARDCODE_KEYS
+endif
+
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
 
 ASFLAGS	:=	-g $(ARCH)
@@ -90,9 +94,11 @@ export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/gm9*.*)))
+BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/gm9*.*))) \
+				$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/aeskeydb.bin)))
 ifeq ($(SAFEMODE),1)
-	BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/sm9*.*)))
+	BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/sm9*.*))) \
+					$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/aeskeydb.bin)))
 endif
 
 #---------------------------------------------------------------------------------
@@ -136,15 +142,14 @@ binary: common
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 firm: binary screeninit
-	firmtool build $(OUTPUT).firm -n 0x08006000 -A 0x08006000 -D $(OUTPUT).bin $(OUTPUT_D)/screeninit.elf -C NDMA XDMA -S nand-retail
-	firmtool build $(OUTPUT)_dev.firm -n 0x08006000 -A 0x08006000 -D $(OUTPUT).bin $(OUTPUT_D)/screeninit.elf -C NDMA XDMA -S nand-dev
+	firmtool build $(OUTPUT).firm -n 0x08006000 -A 0x08006000 -D $(OUTPUT).bin $(OUTPUT_D)/screeninit.elf -C NDMA XDMA -S nand-retail -g
+	firmtool build $(OUTPUT)_dev.firm -n 0x08006000 -A 0x08006000 -D $(OUTPUT).bin $(OUTPUT_D)/screeninit.elf -C NDMA XDMA -S nand-dev -g
 
 release:
 	@rm -fr $(BUILD) $(OUTPUT_D) $(RELEASE)
 	@$(MAKE) --no-print-directory binary
 	@$(MAKE) --no-print-directory firm
 	@[ -d $(RELEASE) ] || mkdir -p $(RELEASE)
-	@cp $(OUTPUT).bin $(RELEASE)
 	@cp $(OUTPUT).firm $(RELEASE)
 	@cp $(CURDIR)/README.md $(RELEASE)
 	@cp $(CURDIR)/HelloScript.gm9 $(RELEASE)
@@ -179,6 +184,11 @@ $(OUTPUT).elf	:	$(OFILES)
 # you need a rule like this for each extension you use as binary data
 #---------------------------------------------------------------------------------
 %_qlz.h %.qlz.o: %.qlz
+#---------------------------------------------------------------------------------
+	@echo $(notdir $<)
+	@$(bin2o)
+#---------------------------------------------------------------------------------
+%_bin.h %.bin.o: %.bin
 #---------------------------------------------------------------------------------
 	@echo $(notdir $<)
 	@$(bin2o)
